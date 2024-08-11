@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Select Meal Types</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #0C3B2E;
+            margin: 0;
+            padding: 0;
+            background-image: url('/static/welcome.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 50px 20px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin: 40px auto;
+            position: relative;
+            text-align: center;
+            width: 90%;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .back-link a {
+            padding: 10px 20px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #FFBA00; /* Yellow */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-link a:hover {
+            background-color: #BB8A52;
+        }
+
+        .title h1 {
+            color: #0C3B2E;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+
+        .title h3 {
+            color: #555;
+            margin-top: 0;
+            font-size: 1em;
+            font-weight: normal;
+        }
+
+        .form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            text-align: left;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .date-meal {
+            margin-bottom: 20px;
+        }
+
+        .date-meal h2 {
+            color: #0C3B2E;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 5px;
+        }
+
+        .submit-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #6D9773;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 200px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0C3B2E;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 15px;
+                margin: 20px auto;
+            }
+
+            .back-link {
+                top: 10px;
+                left: 10px;
+            }
+            .back-link a {
+                padding: 8px 16px;
+                font-size: 0.9em;
+            }
+
+            .title h1 {
+                font-size: 1.8em;
+            }
+
+            .title h3 {
+                font-size: 1em;
+            }
+
+            .form {
+                padding: 20px;
+            }
+
+            .date-meal h2 {
+                font-size: 1em;
+            }
+
+            .checkbox-group label {
+                font-size: 0.8em;
+            }
+
+            button {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const maxChecked = 7;
+            const checkboxes = document.querySelectorAll('.checkbox-group input[type="checkbox"]');
+
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    let checkedCount = document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked').length;
+                    if (checkedCount > maxChecked) {
+                        checkbox.checked = false;
+                        alert(`For food preservation and efficient management of your shopping list, you can only select up to ${maxChecked} meals for a meal plan.`);
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="back-link">
+            <a href="{{ url_for('recipes.planner') }}">Back</a>
+        </div> 
+        <div class="title">
+            <h1>Select Meal Types</h1>
+            <h3>(Leave the checkbox blank to add the recipes manually)</h3>
+        </div>
+        <div class="form">
+            <form method="POST" action="{{ url_for('recipes.meal_type') }}">
+                <input type="hidden" name="start_date" value="{{ request.args.get('start_date') }}">
+                <input type="hidden" name="end_date" value="{{ request.args.get('end_date') }}">
+                {% for date in date_range %}
+                    <div class="date-meal">
+                        <h2>{{ date }}</h2>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="{{ date }}" value="Breakfast"> Breakfast</label>
+                            <label><input type="checkbox" name="{{ date }}" value="Lunch"> Lunch</label>
+                            <label><input type="checkbox" name="{{ date }}" value="Dinner"> Dinner</label>
+                        </div>
+                    </div>
+                {% endfor %}
+                <div class="submit-container">
+                    <button type="submit">Generate Meal Plan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+
+

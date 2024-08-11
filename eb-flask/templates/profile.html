@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1>Your Profile</h1>
+    </div>
+    <div class="profile-content">
+        <div class="profile-photo-section">
+            <img id="profile-photo-img" src="{{ profile_photo if profile_photo else url_for('static', filename='default_profile.png') }}" alt="Profile Photo" class="profile-photo">
+            <button type="button" id="upload-photo-btn" class="btn btn-primary">Upload New Photo</button>
+        </div>
+        <div class="profile-info-section">
+            <form id="profile-form" method="POST" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data">
+                <input type="file" id="profile_photo" name="profile_photo" accept="image/*" style="display: none;">
+                
+                <div class="form-group">
+                    <label>Email:</label>
+                    {{ email }}
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" value="{{ username }}" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label>Allergies:</label>
+                    <div class="allergy-group">
+                        {% for allergy in ['Peanut', 'Gluten', 'Dairy', 'Seafood'] %}
+                        <div class="allergy-item">
+                            <input type="checkbox" id="{{ allergy.lower() }}" name="allergy" value="{{ allergy }}" {% if allergy in allergies %}checked{% endif %}>
+                            <label for="{{ allergy.lower() }}">{{ allergy }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Logout</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for displaying the success message -->
+<div id="updateModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeUpdateModal()">&times;</span>
+        <p id="updateModalMessage"></p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('upload-photo-btn').addEventListener('click', function() {
+        document.getElementById('profile_photo').click();
+    });
+
+    document.getElementById('profile_photo').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('profile-photo-img').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('profile-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch("{{ url_for('auth.profile') }}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('updateModalMessage').textContent = data.message;
+            document.getElementById('updateModal').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('updateModalMessage').textContent = 'An error occurred while updating the profile.';
+            document.getElementById('updateModal').style.display = 'block';
+        });
+    });
+
+    function closeUpdateModal() {
+        document.getElementById('updateModal').style.display = 'none';
+    }
+
+    // Close the modal when clicking outside of it
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('updateModal')) {
+            closeUpdateModal();
+        }
+    }
+    
+</script>
+{% endblock %}
+{% block styles %}
+<style>
+    .profile-container {
+        max-width: 800px;
+        margin: 40px auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .profile-header {
+        background-color: #6D9773;
+        color: #ffffff;
+        padding: 20px;
+        text-align: center;
+    }
+    .profile-content {
+        display: flex;
+        padding: 30px;
+    }
+    .profile-photo-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-right: 30px;
+    }
+    .profile-photo {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #6D9773;
+        margin-bottom: 20px;
+    }
+    .profile-info-section {
+        flex: 2;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        box-sizing: border-box;
+    }
+    .allergy-group {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .allergy-item {
+        display: flex;
+        align-items: center;
+    }
+    .allergy-item input[type="checkbox"] {
+        margin-right: 10px;
+    }
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+    }
+    .btn-primary {
+        background-color: #6D9773;
+        color: #ffffff;
+    }
+    .btn-primary:hover {
+        background-color: #0C3B2E;
+    }
+    .btn-danger {
+        background-color: #FFBA00;
+        color: #ffffff;
+    }
+    .btn-danger:hover {
+        background-color: #BB8A52;
+    }
+    .button-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+    }
+
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .profile-container {
+            margin: 20px 10px;
+        }
+        .profile-content {
+            flex-direction: column;
+            padding: 20px;
+        }
+        .profile-photo-section {
+            margin-right: 0;
+            margin-bottom: 30px;
+        }
+        .profile-photo {
+            width: 150px;
+            height: 150px;
+        }
+        .allergy-group {
+            grid-template-columns: 1fr;
+        }
+        .button-group {
+            flex-direction: column;
+            gap: 10px;
+            margin: 10px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .profile-container {
+            margin: 10px;
+        }
+        .profile-content {
+            padding: 15px;
+        }
+        .profile-photo {
+            width: 120px;
+            height: 120px;
+        }
+        .form-group label {
+            font-size: 14px;
+            width: 100%;
+        }
+        .form-control {
+            font-size: 14px;
+        }
+    }
+</style>
+{%endblock%}
+
+
+
+
+
+
+
+

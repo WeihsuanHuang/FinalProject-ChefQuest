@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Upload Your Meal Picture</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Your existing styles here */
+        body {
+            background-image: url('/static/welcome.jpg');
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .title h1 {
+            text-align: center;
+            color: #6D9773; 
+            font-size: 2rem;
+            margin-top: 60px; /* To account for the back button */
+        }
+
+        .back-link a {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px 15px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #FFBA00; /* Yellow */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-decoration: none;
+        }
+
+        .back-link a:hover {
+            background-color: #BB8A52; /* Brown */
+        }
+
+        .btn-primary {
+            background-color: #6D9773; /* Light Green */
+            border-color: #6D9773;
+        }
+
+        .btn-primary:hover {
+            background-color: #0C3B2E; /* Dark Green */
+            border-color: #0C3B2E;
+        }
+
+        .modal-header {
+            background-color: #6D9773; /* Light Green */
+            color: white;
+        }
+
+        .modal-footer .btn-secondary {
+            background-color: #BB8A52; /* Brown */
+            border-color: #BB8A52;
+        }
+
+        .modal-footer .btn-secondary:hover {
+            background-color: #FFBA00; /* Yellow */
+            border-color: #FFBA00;
+        }
+
+        label {
+            font-weight: bold;
+            color: #0C3B2E; /* Dark Green */
+        }
+
+        .form-control-file {
+            padding: 10px;
+            border: 2px dashed #6D9773; /* Light Green */
+            background: #f9f9f9;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        /* Add these styles for the modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 0;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            padding: 15px;
+            background-color: #6D9773;
+            color: white;
+            position: relative;
+        }
+
+        .close {
+            color: white;
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 15px;
+        }
+
+        .modal-footer {
+            padding: 15px;
+            background-color: #f1f1f1;
+            text-align: right;
+        }
+
+        @media (max-width: 767px) {
+            .container {
+                padding: 20px 15px;
+                margin: 20px auto;
+                width: 85%
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="back-link">
+            <a href="{{ url_for('auth.home') }}">Back</a>
+        </div>
+        <div class="title">
+            <h1>Upload Your Meal Picture</h1>
+        </div>
+        <form id="upload-form" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Choose an image:</label>
+                <input type="file" id="file" name="file" accept="image/*" capture="environment" class="form-control-file" required>
+                <input type="hidden" name="recipe_img_url" value="{{ recipe_img_url }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Check-in</button>
+        </form>
+    </div>
+
+    <!-- Modal -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Culinary Match Score</h5>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <h2>Your Culinary Match Score is <span id="similarity-score"></span>%!</h2>
+                <p id="score-message"></p>
+            </div>
+            <div class="modal-footer">
+                <a href="/auth/home" class="btn btn-secondary">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadForm = document.getElementById('upload-form');
+        const resultModal = document.getElementById('resultModal');
+        const closeBtn = resultModal.querySelector('.close');
+        const similarityScore = document.getElementById('similarity-score');
+        const scoreMessage = document.getElementById('score-message');
+
+        uploadForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+
+            fetch("{{ url_for('recipes.upload_file') }}?recipe_img_url={{ recipe_img_url }}", {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(response => {
+                if (response.score !== undefined) {
+                    similarityScore.textContent = response.score;
+
+                    let message = '';
+                    if (response.score >= 0 && response.score <= 20) {
+                        message = "Keep practicing! Every attempt is a step towards improvement.";
+                    } else if (response.score > 20 && response.score <= 40) {
+                        message = "Good effort! You're on the right track.";
+                    } else if (response.score > 40 && response.score <= 100) {
+                        message = "Amazing! Keep up the great work in the kitchen!";
+                    }
+
+                    scoreMessage.textContent = message;
+                    resultModal.style.display = 'block';
+                } else {
+                    alert('Upload failed. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Upload failed. Please try again.');
+            });
+        });
+
+        closeBtn.onclick = function() {
+            resultModal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == resultModal) {
+                resultModal.style.display = 'none';
+            }
+        }
+    });
+    </script>
+</body>
+</html>
+

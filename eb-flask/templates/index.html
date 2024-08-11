@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to ChefQuest</title>
+    <style>
+        body {
+            background-image: url('./static/body.jpg');
+            background-size: cover;
+            background-position: center;
+            font-family: Arial, sans-serif;
+            color: #0C3B2E; /* Dark Green */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 50px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 90%;
+            box-sizing: border-box;
+        }
+        .text-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2em;
+            color: #6D9773; /* Light Green */
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 25px;
+            margin: 10px 5px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #FFBA00; /* Yellow */
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #BB8A52; /* Brown */
+        }
+        .image-container img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                max-width: 70%;
+            }
+            .text-container {
+                text-align: left;
+                margin-right: 20px;
+                max-width: 50%;
+            }
+            h1 {
+                font-size: 2.5em;
+            }
+            .image-container {
+                margin-left: 20px;
+            }
+            .image-container img {
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-container">
+            <h1>Welcome to ChefQuest</h1>
+            <a href="/auth/signup" class="btn">Signup</a>
+            <a href="/auth/login" class="btn">Login</a>
+        </div>
+        <div class="image-container">
+            <img src="./static/welcome.jpg" alt="Person with groceries">
+        </div>
+    </div>
+</body>
+</html>
+
+
+
+

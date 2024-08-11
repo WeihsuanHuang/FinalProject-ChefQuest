@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Image Similarity Result</title>
+</head>
+<body>
+    <h1>Image Similarity Result</h1>
+    {% if score %}
+    <h2>Similarity score: {{ score }}</h2>
+    {% endif %}
+    <a href="/auth/home" class="button">Back to Home</a>
+</body>
+</html>

@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Recipes{% endblock %}
+
+{% block content %}
+<div class="title">
+    <h1>Saved Recipes</h1>
+</div>
+<div class="meal-plan">
+    {% if favorite_recipes %}
+        <div class="recipe-list">
+            {% for recipe in favorite_recipes %}
+                <div class="recipe-card" id="recipe-{{ recipe.RecipeID }}">
+                    <div class="recipe-title">
+                        <h3>{{ recipe.Title }}</h3>
+                    </div>
+                    <div class="recipe-details">
+                        <img src="{{ recipe.ImageURL }}" alt="{{ recipe.Title }}">
+                        <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.RecipeID) }}" class="view-recipe-button">View Recipe</a>
+                        <button class="btn btn-danger delete-btn" data-recipe-id="{{ recipe.RecipeID }}" aria-label="Delete {{ recipe.Title }}">Remove</button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-favorite">
+            <p>You haven't added any favorite recipes.</p>
+            <a href="{{ url_for('recipes.explore') }}">Explore Recipes</a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <span onclick="closeModal()" class="close" title="Close Modal">×</span>
+      <div class="container-1">
+        <h1>Remove Recipe from Saved</h1>
+        <p>Are you sure you want to remove this recipe?</p>
+        <div class="clearfix">
+          <button type="button" onclick="closeModal()" class="cancelbtn">Cancel</button>
+          <button type="button" id="confirmDeleteBtn" class="deletebtn">Remove</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.view-recipe-button').forEach(button => {
+            button.addEventListener('click', () => {
+                localStorage.setItem('referrer', 'favorite');
+            });
+        });
+    })
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Event delegation for delete buttons
+        document.querySelector('.recipe-list').addEventListener('click', (event) => {
+            if (event.target.classList.contains('delete-btn')) {
+                openModal(event.target.getAttribute('data-recipe-id'));
+            }
+        });
+
+        // Close modal when clicking the close button
+        document.querySelector('.close').addEventListener('click', closeModal);
+
+        // Close modal when clicking the cancel button
+        document.querySelector('.cancelbtn').addEventListener('click', closeModal);
+
+        // Close modal when clicking outside the modal
+        window.onclick = (event) => {
+            if (event.target == document.getElementById('deleteModal')) {
+                closeModal();
+            }
+        };
+
+        // Confirm delete action
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            var recipe_id = this.getAttribute('data-recipe-id');
+            deleteRecipe(recipe_id);
+        });
+    });
+
+    function openModal(recipe_id) {
+        var modal = document.getElementById('deleteModal');
+        var confirmBtn = document.getElementById('confirmDeleteBtn');
+        confirmBtn.setAttribute('data-recipe-id', recipe_id);
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        var modal = document.getElementById('deleteModal');
+        modal.style.display = 'none';
+    }
+
+    function deleteRecipe(recipe_id) {
+        fetch(`/delete_from_favorites/${recipe_id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`recipe-${recipe_id}`).remove();
+            } else {
+                alert(data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+        closeModal();
+    }
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .title h1{
+        color: #0C3B2E;/* Light Green */
+        font-size: 2.5rem;
+        margin-bottom: 40px; 
+    }
+
+    .meal-plan {
+        display: flex;
+        justify-content: center;
+        padding: 20px 0; /* Added padding */
+        width: 100%;
+    }
+
+    .recipe-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px 20px; /* 30px vertical gap, 20px horizontal gap */
+        justify-content: center; /* Changed back to flex-start */
+        max-width: 1000px; /* Adjusted to fit exactly 3 cards */
+        
+    }
+
+    .recipe-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+        padding: 20px;    
+        text-align: center;
+        width: 313px;
+    }
+
+    .recipe-title h3 {
+        color: #0C3B2E;
+        font-size: 1.2rem;
+        height: 25px;
+        margin-bottom: 10px;
+    }
+
+    .recipe-details img {
+        border-radius: 5px;
+        height: 200px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+
+    .view-recipe-button {
+        background-color: #6D9773; /* green */
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        display: inline-block;
+        font-size: 1rem;
+        margin-top: 10px;
+        padding: 10px 20px;
+        transition: background-color 0.3s;
+        text-decoration: none;
+    }
+
+    .view-recipe-button:hover {
+        background-color: #0C3B2E;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-top: 10px;
+        padding: 10px 20px;
+        transition: background-color 0.3s;
+        text-decoration: none;
+    }
+
+    .btn-danger {
+        background-color: #BB8A52;
+    }
+
+    .btn-danger:hover {
+        background-color: #FFBA00;
+    }
+
+    .no-favorite p {
+        color: #BB8A52;
+    }
+
+    .no-favorite a {
+        background-color: #FFBA00; /* Yellow */
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        display: inline-block;
+        font-size: 1em;
+        margin-top: 20px;
+        margin-top: 10px;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+
+    .no-favorite a:hover {
+        background-color: #BB8A52;
+    }
+
+    .modal {
+        align-items: center;
+        background-color: rgb(0,0,0);
+        background-color: rgba(0,0,0,0.4);
+        display: none;
+        height: 100%;
+        justify-content: center;
+        left: 0;
+        overflow: auto;
+        position: fixed;
+        padding-top: 60px;
+        top: 0;
+        width: 100%;
+        z-index: 1;
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        border: 1px solid #888;
+        border-radius: 10px;
+        margin: 5% auto;
+        max-width: 500px;
+        padding: 20px;
+        width: 80%;
+    }
+
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .container-1 {
+        padding: 16px;
+    }
+
+    .clearfix::after {
+        content: "";
+        clear: both;
+        display: table;
+    }
+
+    .cancelbtn, .deletebtn {
+        background-color: #BB8A52;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        margin: 5px 0;
+        padding: 10px 18px;
+        width: 100%;
+    }
+
+    .cancelbtn {
+        background-color: #bbb;
+    }
+
+    .deletebtn {
+        background-color: #BB8A52; /* Brown */
+    }
+
+    @media (max-width: 1020px) {
+        .container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .recipe-list {
+            max-width: 666px; /* Fits 2 cards */
+            justify-content: center; /* Center when 2 cards */
+        }
+    }
+
+    @media (max-width: 730px) {
+        body{
+            font-size: 12px;
+        }
+
+        .container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .title h1 {
+            margin-bottom: 20px;
+        }
+
+        .recipe-list {
+            gap: 15px;
+            width: 100%;
+        }
+
+        .recipe-card {
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .recipe-details img {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 5px;
+        }
+
+        .modal-content {
+            padding: 15px;
+            width: 80%;
+        }
+    }
+
+</style>
+{% endblock %}
+
+
+
+
+

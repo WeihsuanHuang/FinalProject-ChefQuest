@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ recipe.title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            background-image: url('/static/welcome.jpg');
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 16px;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+
+        .recipe-details {
+            background: rgba(255, 255, 255, 0.9);
+            max-width: 1000px;
+            margin: 60px auto;
+            padding: 50px 20px;
+            position: relative;
+            border-radius: 10px;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            text-decoration: none;
+            padding: 10px 15px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #FFBA00; /* Yellow */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .back-link :hover {
+            background-color: #BB8A52; /* Brown */
+        }
+
+        .recipe-details h1 {
+            color: #6D9773; 
+            font-size: 2rem;
+            margin-top: 60px; /* To account for the back button */
+        }
+
+        .section-title h2{
+            color: #6D9773; 
+            font-size: 1.5rem;
+            margin-top: 30px;
+        }
+
+        .ingredient-list, .instruction-list {
+            text-align: left;
+            margin: 0 auto;
+            padding: 0;
+            list-style: none;
+        }
+
+        .ingredient-list li, .instruction-list li {
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 5px 0;
+        }
+
+        img {
+            max-width: 100%;
+            border-radius: 5px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        #dynamicButtonContainer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right:0;
+            width: 80%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            margin: 0 auto;
+        }
+
+        #dynamicButtonContainer .button,
+        #dynamicButtonContainer form {
+            flex: 1;
+            margin: 0 5px;
+        }
+
+        #dynamicButtonContainer .button,
+        #dynamicButtonContainer button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            background-color: #6D9773;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #dynamicButtonContainer .button:hover,
+        #dynamicButtonContainer button:hover {
+            background-color: #0C3B2E;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        @media (max-width: 767px) {
+            body {
+                font-size: 12px;
+            }
+
+            .recipe-details {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            #dynamicButtonContainer .button,
+            #dynamicButtonContainer button {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="recipe-details">
+        <!-- Back button -->
+        <button id="backButton" class="back-link">Back</button>
+
+        <h1>{{ recipe.title }}</h1>
+
+        <!-- Display the recipe image if available -->
+        {% if recipe.image %}
+        <img src="{{ recipe.image }}" alt="{{ recipe.title }}">
+        {% endif %}
+
+        <strong><p>Ready in Minutes: {{recipe.readyInMinutes}}</p></strong>
+
+        <!-- Display the nutrition information if available -->
+        <div class="section-title">
+            <h2>Nutrition Information</h2>
+        </div>
+        <p>Calories: {{ recipe.nutrition.calories }}</p>
+        <p>Carbohydrates: {{ recipe.nutrition.carbs }}</p>
+        <p>Fat: {{ recipe.nutrition.fat }}</p>
+        <p>Protein: {{ recipe.nutrition.protein }}</p>
+        
+
+        <!-- Ingredients section -->
+        <div class="section-title">
+            <h2>Ingredients</h2>
+        </div>
+        <ul class="ingredient-list">
+            {% for ingredient in recipe.extendedIngredients %}
+            <li>{{ ingredient.original }}</li>
+            {% endfor %}
+        </ul>
+
+        <!-- Instructions Section -->
+         <div class="section-title">
+            <h2>Instructions</h2>
+        </div>
+        <ol class="instruction-list">
+            {% for step in recipe.analyzedInstructions[0].steps %}
+            <li>{{ step.step }}</li>
+            {% endfor %}
+        </ol>
+
+        
+
+        <!-- Placeholder for dynamic button -->
+        <div id="dynamicButtonContainer"></div>
+    </div>
+
+    <!-- Modal for displaying the success message -->
+    <div id="favoriteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeFavoriteModal()">&times;</span>
+            <p id="favoriteModalMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('backButton').addEventListener('click', function() {
+                const referrer = localStorage.getItem('referrer');
+                if (referrer === 'favorite') {
+                    localStorage.removeItem('referrer');
+                    window.location.href = "{{ url_for('recipes.favorites')}}";  // Replace with your actual route
+                } else if (referrer === 'explore') {
+                    localStorage.removeItem('referrer');
+                    window.location.href = "{{ url_for('recipes.explore')}}";  // Replace with your actual route
+                } else if (referrer === 'today') {
+                    localStorage.removeItem('referrer');
+                    window.location.href = "{{ url_for('auth.home')}}";  // Replace with your actual route
+                } else if (referrer === 'manage') {
+                    const planId = localStorage.getItem('plan_id');
+                    localStorage.removeItem('referrer');
+                    localStorage.removeItem('plan_id');
+                    window.location.href = "{{ url_for('recipes.manage_meal_plan', plan_id='') }}" + planId;
+                }
+            });
+
+            // Add dynamic button based on referrer
+            const referrer = localStorage.getItem('referrer');
+            const container = document.getElementById('dynamicButtonContainer');
+
+            if (referrer === 'favorite') {
+                container.innerHTML = `
+                    <a href="{{ url_for('recipes.select_meal_plan', recipe_id=recipe.id) }}" class="button">Add to Meal Plan</a>
+                `;
+            } else if (referrer === 'today') {
+                container.innerHTML = `
+                    <a href="{{ url_for('recipes.upload_file', recipe_img_url=recipe.image) }}" class="button">Check-in with your meal picture</a>
+                `;
+            } else if (referrer === 'explore') {
+                container.innerHTML = `
+                    <a href="{{ url_for('recipes.select_meal_plan', recipe_id=recipe.id) }}" class="button">Add to Meal Plan</a>
+                    <form id="add-to-favorites-form">
+                        <input type="hidden" name="title" value="{{recipe.title}}">
+                        <input type="hidden" name="image" value="{{recipe.image}}">
+                        <button type="submit">Saved</button>
+                    </form>
+                `;
+            } else {
+                container.innerHTML = `
+                    <form id="add-to-favorites-form">
+                        <input type="hidden" name="title" value="{{ recipe.title }}">
+                        <input type="hidden" name="image" value="{{ recipe.image }}">
+                        <button type="submit">Saved</button>
+                    </form>
+                `;
+            }
+
+            // Handle form submission for adding to favorites
+            const form = document.getElementById('add-to-favorites-form');
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    event.preventDefault();
+
+                    const formData = new FormData(form);
+
+                    fetch(`{{ url_for('recipes.add_to_favorites', recipe_id=recipe.id) }}`, {
+                        method: 'POST',
+                        body: new URLSearchParams(formData)
+                    })
+                    .then(response => response.text())
+                    .then(data => {
+                        if (data.includes('Recipe added to favorites!')) {
+                            openFavoriteModal('Recipe has been successfully saved!');
+                        } else {
+                            openFavoriteModal('Recipe is already in Saved!');
+                        } 
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        openFavoriteModal('An error occurred while adding the recipe to saved.');
+                    });
+                });
+            }
+        });
+
+        function openFavoriteModal(message) {
+            const modal = document.getElementById('favoriteModal');
+            document.getElementById('favoriteModalMessage').textContent = message;
+            modal.style.display = 'block';
+        }
+
+        function closeFavoriteModal() {
+            const modal = document.getElementById('favoriteModal');
+            modal.style.display = 'none';
+        }
+
+        // Close the modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('favoriteModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
+

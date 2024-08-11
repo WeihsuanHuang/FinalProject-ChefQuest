@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="welcome-message">
+    <h1>Welcome, {{ username }}!</h1>
+    <p>Let's get Cooking.</p>
+    <h2>Today's Tasks</h2>
+</div>
+
+<div class="meal-plan">
+        {% if meals_today %}
+            <div class="meal-plan-container">
+                {% for meal in meals_today %}
+                    <div class="meal-item">
+                        <div class="meal-info">
+                            <h3><strong>{{ meal.MealType }}:</strong> {{ meal.Recipe.Title }}</h3>
+                        </div>
+                        <div class="meal-details">
+                            <img src="{{ meal.Recipe.ImageURL }}" alt="{{ meal.Recipe.Title }}">
+                            <a href="{{ url_for('recipes.view_recipe', recipe_id=meal.Recipe.RecipeID) }}" class="view-recipe-button">Start Cooking</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-meals">
+                <p>No task for today.</p>
+                <a href="{{ url_for('recipes.planner') }}">Schdule Meal Plan</a>
+                <a href="{{ url_for('recipes.explore') }}">Search for Recipes</a>
+            </div>
+        {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.view-recipe-button').forEach(button => {
+            button.addEventListener('click', () => {
+                localStorage.setItem('referrer', 'today');
+            });
+        });
+    });
+
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        var showIntroGuide = JSON.parse('{{ show_intro_guide|tojson|safe }}');
+        if (showIntroGuide) {
+            startIntro();
+        }
+    });
+
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .welcome-message h1 {
+        color: #0C3B2E;/* Light Green */
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+
+    .welcome-message p {
+        font-size: 1.2em;
+        color: #0C3B2E; /* Dark Green */
+    }
+
+    .meal-plan {
+        display: flex;
+        justify-content: center;
+        padding: 20px 0; /* Added padding */
+        width: 100%;
+    }
+
+    .meal-plan-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px 20px; /* 30px vertical gap, 20px horizontal gap */
+        justify-content: center; /* Changed back to flex-start */
+        max-width: 1000px; /* Adjusted to fit exactly 3 cards */
+    }
+
+    .meal-item {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+        padding: 20px;    
+        text-align: center;
+        width: 313px;
+    }
+
+    .meal-info h3 {
+        color: #0C3B2E;
+        font-size: 1.2rem;
+        height: 25px;
+        margin-bottom: 10px;
+    }
+
+    .meal-details img {
+        border-radius: 5px;
+        height: 200px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+
+    .view-recipe-button, .no-meals a {
+        background-color: #6D9773; /* green */
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        display: inline-block;
+        font-size: 1rem;
+        margin-top: 10px;
+        padding: 10px 20px;
+        transition: background-color 0.3s;
+        text-decoration: none;
+    }
+
+    .view-recipe-button:hover, .no-meals a:hover {
+        background-color: #0C3B2E;
+    }
+
+    .no-meals p {
+        font-size: 1.2em;
+        color: #BB8A52; /* Brown */
+    }
+
+    @media (max-width: 1020px) {
+        .container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .meal-plan-container {
+            max-width: 666px; /* Fits 2 cards */
+            justify-content: center; /* Center when 2 cards */
+        }
+    }
+
+    @media (max-width: 450px) {
+        body {
+            font-size: 12px;
+        }
+
+        .container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .welcome-message h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .welcome-message p, .welcome-message h2 {
+            font-size: 1rem;
+        }
+
+        .meal-plan {
+            padding: 10px 0;
+        }
+
+        .meal-plan-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .meal-item {
+            display: flex;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .meal-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .meal-details img {
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+
+        .meal-info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .meal-info h3 {
+            font-size: 1rem;
+            color: #0C3B2E;
+            margin-top: 10px;
+        }
+
+        .view-recipe-button {
+            background-color: #6D9773;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            margin-top: 5px;
+            margin-right: 10px;
+            text-decoration: none;
+            align-self: flex-start;
+        }
+
+        .no-meals {
+            text-align: center;
+        }
+
+        .no-meals p {
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .no-meals a {
+            display: block;
+            margin: 10px auto;
+            width: fit-content;
+        }
+    }
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+

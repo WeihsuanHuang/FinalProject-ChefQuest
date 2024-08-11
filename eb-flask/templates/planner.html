@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Meal Planner{% endblock %}
+
+{% block content %}
+<div class="container-1">
+    <h1>Schedule Meal</h1>
+    <form id="meal-planner-form" method="POST" action="{{ url_for('recipes.planner') }}">
+        <div class="calendar">
+            <input type="text" id="dateRangePicker" name="date_range" placeholder="Select date range" required>
+            <input type="hidden" id="start_date" name="start_date">
+            <input type="hidden" id="end_date" name="end_date">
+        </div>
+        <button type="submit" class="btn-confirm">Confirm</button>
+        <div id="alert-message" class="alert-message"></div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Include flatpickr styles and scripts -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Parse the disabled dates passed from Flask
+        const disabledDates = JSON.parse('{{ disabled_dates|tojson|safe }}');
+        console.log("Disabled Dates: ", disabledDates);  // Debugging
+
+        const dateRangePicker = flatpickr("#dateRangePicker", {
+            mode: "range",
+            minDate: "today",
+            dateFormat: "Y-m-d",
+            disable: disabledDates,
+            onOpen: function(selectedDates, dateStr, instance) {
+                instance.set('disable', disabledDates);
+            },
+            onChange: function(selectedDates, dateStr, instance) {
+                if (selectedDates.length > 1) {
+                    const startDate = selectedDates[0];
+                    const endDate = selectedDates[selectedDates.length - 1];
+                    
+                    // Check if any date in the range is disabled
+                    let isRangeValid = true;
+                    let currentDate = new Date(startDate);
+                    while (currentDate <= endDate) {
+                        if (isDateDisabled(currentDate)) {
+                            isRangeValid = false;
+                            break;
+                        }
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+
+                    if (!isRangeValid) {
+                        alert("Your selected range includes disabled dates. Please choose a different range.");
+                        instance.clear();
+                        return;
+                    }
+
+                    const diffTime = Math.abs(endDate - startDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays > 6) {
+                        alert("Please select a date range up to 7 days.");
+                        instance.clear();
+                    } else {
+                        document.getElementById('start_date').value = formatDate(startDate);
+                        document.getElementById('end_date').value = formatDate(endDate);
+                    }
+                } else if (selectedDates.length === 1) {
+                    const startDate = selectedDates[0];
+                    document.getElementById('start_date').value = formatDate(startDate);
+                    document.getElementById('end_date').value = formatDate(startDate);
+                }
+            }
+        });
+
+        document.getElementById('meal-planner-form').addEventListener('submit', function(event) {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            if (!startDate || !endDate) {
+                event.preventDefault();
+                document.getElementById('alert-message').innerHTML = "Please select a date range up to 7 days.";
+            }
+        });
+
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function isDateDisabled(date) {
+            return disabledDates.some(disabledDate => {
+                return new Date(disabledDate).toDateString() === date.toDateString();
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+
+{% block styles %}
+<style>
+    .container-1 {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 50px;
+        border-radius: 10px;
+        max-width: 800px;
+        margin: 80px auto;
+        text-align: center;
+    }
+    h1 {
+        font-size: 2.5rem;
+        color: #6D9773; /* Light Green */
+    }
+    .calendar {
+        margin: 20px 0;
+    }
+    #dateRangePicker {
+        padding: 10px;
+        width: 100%;
+        max-width: 400px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+    .btn-confirm {
+        padding: 10px 20px;
+        font-size: 1rem;
+        color: #fff;
+        background-color: #FFBA00; /* Yellow */
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .btn-confirm:hover {
+        background-color: #BB8A52; /* Brown */
+    }
+    .alert-message {
+        color: #f44336; /* Red */
+        margin-top: 20px;
+    }
+    @media (max-width: 767px) {
+        body {
+            font-size: 12px;
+        }
+        .container {
+            padding: 20px;
+            margin: 20px;
+        }
+    }
+</style>
+{% endblock %}

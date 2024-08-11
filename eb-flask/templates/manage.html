@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Meal Plan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #0C3B2E;
+            margin: 0;
+            padding: 0;
+            background-image: url('/static/welcome.jpg');
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 60px auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 50px 20px;
+            position: relative;
+        }
+
+        .back-link a {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            text-decoration: none;
+            padding: 10px 15px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #FFBA00; /* Yellow */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .back-link a:hover {
+            background-color: #BB8A52;
+        }
+
+        .title h1 {
+            text-align: center;
+            color: #6D9773; 
+            font-size: 2rem;
+            margin-top: 60px; /* To account for the back button */
+        }
+
+        .meal-day {
+            background: rgba(255, 255, 255, 0.9);
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .meal-day h2 {
+            color: #0C3B2E;
+            margin-top: 0;
+        }
+
+        .meal-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .meal {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 250px;
+            text-align: center;
+        }
+
+        .meal h3 {
+            font-size: 1rem;
+            color: #0C3B2E;
+            margin-top: 0;
+        }
+
+        .meal img {
+            max-width: 100%;
+            height: 200px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .view-recipe-button, .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #6D9773;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+
+        .view-recipe-button:hover, .btn:hover {
+            background-color: #0C3B2E;
+        }
+
+        .btn-danger {
+            background-color: #BB8A52;
+        }
+
+        .btn-danger:hover {
+            background-color: #FFBA00;
+        }
+
+        .no-meals {
+            text-align: center;
+            margin: 40px 0;
+            font-size: 1.2em;
+            color: #BB8A52;
+        }
+
+        .button-container button {
+            position: fixed;
+            bottom: 10px;
+            left: 0;
+            right:0;
+            width: 80%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            margin: 0 auto;
+            background-color: #FFBA00;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color:#fff;
+            transition: background-color 0.3s;
+        }
+
+        .button-container button:hover {
+            background-color: #BB8A52;
+        }
+
+
+        @media (max-width: 767px) {
+            body{
+                font-size: 12px;
+            }
+
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            .meal-day {
+                background-color: #b3d2b8;
+            }
+
+            .meal img {
+                width: 100%;
+                height: 150px;
+                margin-top: 5px;
+            }
+
+            .view-recipe-button, .btn{
+                margin-top: 0;
+            }
+
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+            <div class="back-link">
+                <a href="{{ url_for('recipes.my_plan') }}">Back</a>
+            </div>
+            <div class="title">
+                <h1>Manage Meal Plan</h1>
+            </div>
+            <div class="meal-plan">
+                {% if meal_plan.meals %}
+                    <form method="POST" action="{{ url_for('recipes.update_meal_plan', plan_id=meal_plan._id) }}" id="mealPlanForm">
+                        {% for date, meals in meal_plan.meals | groupby('Date') %}
+                        <div class="meal-day" aria-labelledby="meal-day-{{ loop.index }}">
+                            <h2 id="meal-day-{{ loop.index }}">{{ date }}</h2>
+                            <div class="meal-row">
+                                {% for meal in meals %}
+                                <div class="meal" aria-labelledby="meal-{{ meal.MealID }}">
+                                    <div class="meal-content">
+                                        <h3 id="meal-{{ meal.MealID }}">{{ meal.MealType }}</h3>
+                                        <img src="{{ meal.Recipe.ImageURL }}" alt="{{ meal.Recipe.Title }}" class="fixed-size-image">
+                                        <p>{{ meal.Recipe.Title }}</p>
+                                        <a href="{{ url_for('recipes.view_recipe', recipe_id=meal.Recipe.RecipeID) }}" class="btn btn-primary view-recipe-button" data-plan-id="{{ meal_plan._id }}">View Recipe</a>
+                                        <button type="button" class="btn btn-danger" onclick="removeMeal('{{ meal.MealID }}', this)">Remove</button>
+                                        <input type="hidden" name="remove-{{ meal.MealID }}" id="remove-{{ meal.MealID }}" value="false">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                {% else %}
+                        <div class="no-meals">
+                            <p>No meal plan for the dates.</p>
+                            <a href="{{ url_for('recipes.explore') }}">Explore Recipe</a>
+                            <a href="{{ url_for('recipes.favorites') }}">My Favorites</a>
+                        </div>
+                {% endif %}
+                        <div class="button-container">
+                            <button type="submit">Update Meal Plan</button>
+                        </div>
+                    </form>
+            </div>
+    </div>
+
+    <script>
+        function removeMeal(mealId, element) {
+            const mealElement = element.closest('.meal');
+            mealElement.style.opacity = '0.5';
+            mealElement.style.pointerEvents = 'none';
+            document.getElementById('remove-' + mealId).value = 'true';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.view-recipe-button').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    localStorage.setItem('referrer', 'manage');
+                    localStorage.setItem('plan_id', button.getAttribute('data-plan-id'));
+                });
+            });
+
+            document.getElementById('mealPlanForm').addEventListener('submit', function(event) {
+                const formData = new FormData(this);
+                for (const [key, value] of formData.entries()) {
+                    console.log(`${key}: ${value}`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

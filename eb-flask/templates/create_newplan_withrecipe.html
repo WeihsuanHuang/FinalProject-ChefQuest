@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Plan with Recipe</title>
+    <!-- Include flatpickr styles and scripts -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #0C3B2E; /* Dark Green */
+            margin: 0;
+            padding: 0;
+            background-image: url('/static/welcome.jpg');
+            font-size: 16px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 50px 20px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin: 40px auto;
+            position: relative;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        .back-link a {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            text-decoration: none;
+            padding: 10px 15px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #FFBA00; /* Yellow */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .back-link a:hover {
+            background-color: #BB8A52;
+        }
+
+        .title h1 {
+            text-align: center;
+            color: #6D9773; 
+            font-size: 2rem;
+            margin-top: 60px; /* To account for the back button */
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            text-align: left;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #6D9773; /* Light Green */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0C3B2E; /* Dark Green */
+        }
+
+        @media (max-width: 767px) {
+            body{
+                font-size: 12px;
+            }
+
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class ="back-link">
+            <a href="{{ url_for('recipes.select_meal_plan', recipe_id=recipe.id) }}">Back</a>
+        </div>
+        <div class="title">
+            <h1>Create a meal plan for {{ recipe.title }}</h1>
+        </div>
+        <div class="form">
+            <form method="POST" action="{{ url_for('recipes.create_mealplan_with_recipe', recipe_id=recipe.id) }}">
+                <label for="date">Date:</label>
+                <input type="text" id="date" name="date" required>
+                
+                <label for="meal_type">Meal Type:</label>
+                <select id="meal_type" name="meal_type" required>
+                    <option value="Breakfast">Breakfast</option>
+                    <option value="Lunch">Lunch</option>
+                    <option value="Dinner">Dinner</option>
+                </select>
+                
+                <button type="submit" id="submit-button" name="submit-button">Add to Meal Plan</button>
+            </form>
+        </div>
+    </div>    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var dateInput = document.getElementById('date');
+            var disabledDates = JSON.parse('{{ disabled_dates|tojson|safe }}');
+            
+            // Get yesterday's date
+            var yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            // Format yesterday's date as 'YYYY-MM-DD'
+            var formattedYesterday = yesterday.toISOString().split('T')[0];
+            
+            // Add yesterday to the disabledDates array
+            disabledDates.push(formattedYesterday);
+    
+            var flatpickrConfig = {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "Y-m-d",
+                minDate: "today",
+                disable: disabledDates,
+                locale: {
+                    firstDayOfWeek: 1 // Start week on Monday
+                },
+                disableMobile: false
+            };
+    
+            flatpickr(dateInput, flatpickrConfig);
+        });
+    </script>
+    
+</body>
+</html>
+
+

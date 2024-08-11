@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+
+{% block title %}My Meal Plans{% endblock %}
+
+{% block content %}
+<div class="title">
+  <h1>Manage Plan</h1>
+</div>
+
+<div class="meal-plans-list">
+    {% if meal_plans %}
+        <div class="meal-plan">
+            {% for meal_plan in meal_plans %}
+                <div class="mealplan-card" id="meal-plan-{{ meal_plan._id }}">
+                  <div class="mealplan-name">
+                    <h2>{{ meal_plan.duration.start_date }} - {{ meal_plan.duration.end_date }}</h2>
+                  </div>
+                  <div class="button-group">
+                    <a href="{{ url_for('recipes.manage_meal_plan', plan_id=meal_plan._id) }}" class="btn btn-primary view-btn">View</a>
+                    <button class="btn btn-success add-to-shopping-list" data-plan-id="{{ meal_plan._id }}">Add to Shopping List</button>
+                  </div>
+                  <a href="#" class="edit-icon" onclick="openModal('{{ meal_plan._id }}'); return false;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path d="M3 6h18v2H3V6zm3 3h12v12c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V9zm6-7c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm-1 5h2v14h-2V7z"/>
+                    </svg>
+                  </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-plan">
+            <p>You haven't created any plans.</p>
+            <a href="{{ url_for('recipes.planner') }}">Schedule Meal</a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content">
+    <span onclick="closeModal()" class="close" title="Close Modal">×</span>
+    <div class="container-1">
+      <h1>Delete Meal Plan</h1>
+      <p>Are you sure you want to delete this meal plan?</p>
+      <div class="clearfix">
+        <button type="button" onclick="closeModal()" class="cancelbtn">Cancel</button>
+        <button type="button" id="confirmDeleteBtn" class="deletebtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ingredients Checklist Modal -->
+<div id="ingredientsModal" class="modal">
+  <div class="modal-content">
+    <span onclick="closeIngredientsModal()" class="close" title="Close Modal">×</span>
+    <div class="container-1">
+      <h1>Ingredients Checklist</h1>
+      <form id="ingredientsForm">
+        <!-- Ingredients checkboxes will be dynamically added here -->
+      </form>
+      <div class="clearfix">
+        <button type="button" onclick="closeIngredientsModal()" class="cancelbtn">Cancel</button>
+        <button type="button" id="saveIngredientsBtn" class="savebtn">Save Ingredients</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+  closeModal();
+  closeIngredientsModal();
+});
+
+function openModal(planId) {
+  var modal = document.getElementById('deleteModal');
+  var confirmBtn = document.getElementById('confirmDeleteBtn');
+  confirmBtn.setAttribute('data-plan-id', planId);
+  modal.style.display = 'flex';
+}
+
+function closeModal() {
+  var modal = document.getElementById('deleteModal');
+  modal.style.display = 'none';
+}
+
+function closeIngredientsModal() {
+  var modal = document.getElementById('ingredientsModal');
+  modal.style.display = 'none';
+}
+
+document.querySelectorAll('.add-to-shopping-list').forEach(button => {
+  button.addEventListener('click', function() {
+    const planId = this.getAttribute('data-plan-id');
+    fetchIngredients(planId);
+  });
+});
+
+function fetchIngredients(planId) {
+  fetch(`/generate_ingredients/${planId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      displayIngredientsModal(data.ingredients, planId);
+    } else {
+      alert('Failed to fetch ingredients');
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+function displayIngredientsModal(ingredients, planId) {
+  const ingredientsForm = document.getElementById('ingredientsForm');
+  ingredientsForm.innerHTML = ''; // Clear previous ingredients
+
+  ingredients.forEach(ingredient => {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = 'ingredients';
+    checkbox.value = JSON.stringify(ingredient);
+    checkbox.checked = true;
+
+    const label = document.createElement('label');
+    label.textContent = `${ingredient.name} (${ingredient.amount} ${ingredient.unit})`;
+
+    const div = document.createElement('div');
+    div.appendChild(checkbox);
+    div.appendChild(label);
+    
+
+    ingredientsForm.appendChild(div);
+  });
+
+  document.getElementById('saveIngredientsBtn').setAttribute('data-plan-id', planId);
+  document.getElementById('ingredientsModal').style.display = 'flex';
+}
+
+document.getElementById('saveIngredientsBtn').onclick = function() {
+  const planId = this.getAttribute('data-plan-id');
+  const checkboxes = document.querySelectorAll('input[name="ingredients"]:checked');
+  const selectedIngredients = Array.from(checkboxes).map(checkbox => JSON.parse(checkbox.value));
+
+  fetch('/save_ingredients', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      plan_id: planId,
+      selected_ingredients: selectedIngredients
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Ingredients saved to shopping list');
+      closeIngredientsModal();
+    } else {
+      alert('Failed to save ingredients');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while saving ingredients');
+  });
+}
+
+window.onclick = function(event) {
+  var deleteModal = document.getElementById('deleteModal');
+  var ingredientsModal = document.getElementById('ingredientsModal');
+  if (event.target == deleteModal) {
+    deleteModal.style.display = 'none';
+  }
+  if (event.target == ingredientsModal) {
+    ingredientsModal.style.display = 'none';
+  }
+}
+
+document.getElementById('confirmDeleteBtn').onclick = function() {
+  var planId = this.getAttribute('data-plan-id');
+  fetch(`/delete_meal_plan/${planId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById(`meal-plan-${planId}`).remove();
+    } else {
+      alert(data.error);
+    }
+  })
+  .catch(error => console.error('Error:', error));
+  closeModal();
+}
+</script>
+{% endblock %}
+
+
+{% block styles %}
+<style>
+    .title h1 {
+        font-size: 2.5rem;
+        color: #0C3B2E; /* Light Green */
+        text-align: center;
+    }
+
+    .meal-plan{
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .mealplan-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        position: relative;
+    }
+
+    .mealplan-name h2 {
+        color: #0C3B2E; /* Dark Green */
+        text-align: left;
+        font-size: 1.5rem;
+    }
+
+    .button-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 10px 20px;
+        transition: background-color 0.3s;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .btn-primary {
+        background-color: #0C3B2E; /* Dark Green */
+    }
+
+    .btn-primary:hover {
+        background-color: #6D9773; /* Light Green */
+    }
+
+    .btn-success {
+        background-color: #6D9773; /* Light Green */
+    }
+
+    .btn-success:hover {
+        background-color: #0C3B2E; /* Dark Green */
+    }
+
+    .btn-danger {
+        background-color: #BB8A52; /* Brown */
+    }
+
+    .btn-danger:hover {
+        background-color: #FFBA00; /* Yellow */
+    }
+
+    .no-plan p {
+        color: #BB8A52; /* Brown */
+        text-align: center;
+    }
+
+    .no-plan a {
+        background-color: #FFBA00; /* Yellow */
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        display: inline-block;
+        font-size: 1em;
+        text-align: center;
+        margin-top: 20px;
+        padding: 10px 20px;
+        transition: background-color 0.3s;
+        text-decoration: none;
+    }
+
+    .no-plan a:hover {
+        background-color: #BB8A52;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgb(0,0,0);
+        background-color: rgba(0,0,0,0.4);
+        padding-top: 60px;
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 10px;
+    }
+
+    #ingredientsForm{
+      padding: 20px;
+      max-height: 400px; /* Adjust as needed */
+      overflow-y: auto; /* Enable vertical scroll */
+      background: #fff;
+    }
+
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .container-1 {
+        padding: 16px;
+    }
+    .clearfix::after {
+        content: "";
+        clear: both;
+        display: table;
+    }
+    .cancelbtn, .deletebtn, .savebtn{
+        width: 100%;
+        padding: 10px 18px;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px 0;
+    }
+    .cancelbtn {
+        background-color: #bbb;
+    }
+    .deletebtn {
+        background-color: #BB8A52; /* Brown */
+    }
+    .savebtn {
+        background-color: #BB8A52; /* Brown */
+    }
+    .edit-icon {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        width: 24px;
+        height: 24px;
+        fill: #0C3B2E; /* Dark Green */
+        transition: fill 0.3s;
+    }
+    .edit-icon:hover {
+        fill: #6D9773; /* Light Green */
+    }
+
+    /* Media Queries */
+    @media (max-width: 767px) {
+        body{
+            font-size: 12px;
+        }
+
+        .container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .button-group {
+            gap: 10px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            min-width: unset; /* Remove minimum width on mobile */  
+        }
+        .edit-icon {
+            top: 5px;
+            right: 5px;
+        }
+    }
+
+</style>
+{% endblock %}

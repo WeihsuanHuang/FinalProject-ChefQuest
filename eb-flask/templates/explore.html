@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Explore{% endblock %}
+
+{% block content %}
+<div class="title">
+    <h1>Explore Recipes</h1>
+    <form method="POST" action="{{ url_for('recipes.explore') }}">
+        <input type="text" name="search_query" placeholder="Search for recipes">
+        <input type="submit" value="Search">
+    </form>
+    {% if search_query %}
+        <h2>Search Results for "{{ search_query }}"</h2>
+    {% endif %}
+</div>
+<div class="explore-container">
+    <!-- Check if recipes are available-->
+    {% if recipes %}
+        <div class="recipe-grid">
+            {% for recipe in recipes %}
+                <div class="recipe-card">
+                    <div class="recipe-title">
+                        <h3>{{ recipe.title }}</h3>
+                    </div>
+                    <div class="recipe-details">
+                        <img src="{{ recipe.image }}" alt="{{ recipe.title }}">
+                        <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id, search_query=search_query) }}" class="view-recipe-button">View Recipe</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    <!-- If no recipes are found -->
+    {% else %}
+        <div class="no-recipe">
+            <p>No recipes for "{{ search_query }}" found.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.view-recipe-button').forEach(button => {
+            button.addEventListener('click', () => {
+                localStorage.setItem('referrer', 'explore');
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .title h1 {
+        color: #0C3B2E;
+        font-size: 2.5rem;
+    }
+
+    .title h2 {
+        color: #6D9773;
+        font-size: 1.8rem;
+    }
+
+    .title form {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+    }
+
+    .title input[type="text"] {
+        border: 1px solid #ccc;
+        border-radius: 5px 0 0 5px;
+        font-size: 1em;
+        padding: 10px;
+        width: 313px;
+    }
+
+    .title input[type="submit"] {
+        background-color: #FFBA00; /* Yellow */
+        border: none;
+        border-radius: 0 5px 5px 0;
+        color: #fff;
+        cursor: pointer;
+        font-size: 1em;
+        padding: 10px 20px;
+        transition: background-color 0.3s;
+    }
+
+    .title input[type="submit"]:hover {
+        background-color: #BB8A52; /* Brown */
+    }
+
+    .explore-container {
+        display: flex;
+        justify-content: center;
+        padding: 20px 0; /* Added padding */
+        width: 100%;
+    }
+
+    .recipe-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px 20px; /* 30px vertical gap, 20px horizontal gap */
+        justify-content: center; /* Changed back to flex-start */
+        max-width: 1000px; /* Adjusted to fit exactly 3 cards */
+    }
+
+    .recipe-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+        padding: 20px;    
+        text-align: center;
+        width: 313px;
+    }
+
+    .recipe-title h3{
+        color: #0C3B2E;
+        font-size: 1.2rem;
+        height: 25px;
+        margin-bottom: 10px;
+    }
+
+    .recipe-card img {
+        border-radius: 5px;
+        height: 200px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+
+    .view-recipe-button {
+        background-color: #6D9773; /* green */
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        display: inline-block;
+        font-size: 1rem;
+        margin-top: 10px;
+        padding: 10px 20px;
+        transition: background-color 0.3s;
+        text-decoration: none;
+    }
+
+    .view-recipe-button:hover {
+        background-color: #0C3B2E; /* Dark Green */
+    }
+
+    .no-recipe p {
+        color: #BB8A52; /* Brown */
+    }
+
+    @media (max-width: 1020px) {
+        .container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .recipe-grid {
+            max-width: 666px; /* Fits 2 cards */
+            justify-content: center; /* Center when 2 cards */
+        }
+    }
+
+    @media (max-width: 450px) {
+    .recipe-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+    }
+
+    .recipe-card {
+        display: flex;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        padding: 10px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .recipe-card img {
+        width: 100px;
+        height: 100px;
+        border-radius: 10px;
+        object-fit: cover;
+        margin-right: 10px;
+    }
+
+    .recipe-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .recipe-title {
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+    }
+
+    .recipe-title h3 {
+        font-size: 1rem;
+        color: #0C3B2E;
+        margin-top: 10px;
+    }
+
+    .view-recipe-button {
+        background-color: #6D9773;
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        margin-top: 5px;
+        margin-right: 10px;
+        text-decoration: none;
+        align-self: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
+
+
+
