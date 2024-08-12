@@ -1,16 +1,36 @@
-from flask import Blueprint, render_template, request, flash, redirect, session, url_for, jsonify, current_app
-from urllib.parse import unquote
-from utils import search_recipes, fetch_recipes, get_full_recipe_details, get_recipes_information, simplify_ingredients, compare_images, get_one_recipe_information
-from pymongo import MongoClient
-from datetime import datetime, timedelta
-from auth.routes import get_user_by_email
-from bson import ObjectId
 import uuid
 import os
 import math
 import logging
 import boto3
+
+from datetime import datetime, timedelta
+from urllib.parse import unquote
+from bson import ObjectId
 from werkzeug.utils import secure_filename
+from pymongo import MongoClient
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    flash,
+    redirect,
+    session,
+    url_for,
+    jsonify,
+    current_app
+)
+
+from utils import (
+    search_recipes,
+    fetch_recipes,
+    get_full_recipe_details,
+    get_recipes_information,
+    simplify_ingredients,
+    compare_images,
+    get_one_recipe_information
+)
+from auth.routes import get_user_by_email
 
 
 # Flask Blueprint setup
@@ -28,10 +48,16 @@ def setup_db():
         current_app.meal_plans_collection = current_app.db.meal_plans
         current_app.shopping_lists_collection = current_app.db.shopping_lists
 
+# Helper functions
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @recipes_bp.route('/explore', methods=['GET', 'POST'])
 def explore():
     api_key = current_app.config['RECIPE_API_KEY']
+    
     if request.method == 'POST':
         query = request.form.get('search_query', '')
         recipes = search_recipes(api_key, query)
@@ -42,11 +68,13 @@ def explore():
     recipes = search_recipes(api_key, decoded_search_query)
     return render_template('explore.html', recipes=recipes, search_query=decoded_search_query)
 
+# Routes
 @recipes_bp.route('/recipe/<int:recipe_id>')
 def view_recipe(recipe_id):
     api_key = current_app.config['RECIPE_API_KEY']
     search_query = request.args.get('search_query', '')
     recipe = get_full_recipe_details(api_key, recipe_id)
+    
     if recipe:
         return render_template('view_recipe.html', recipe=recipe, search_query=search_query)
     return "Recipe not found", 404
@@ -57,11 +85,10 @@ def add_to_favorites(recipe_id):
         flash('You need to be logged in to save favorites.')
         return redirect(url_for('auth.login'))
 
+    email = session['email']
     recipe_title = request.form.get('title')
     recipe_image = request.form.get('image')
-    email = session['email']
 
-    # Check if the recipe already exists in favorites
     existing_favorite = current_app.favorites_collection.find_one({
         'email': email,
         'RecipeID': recipe_id
@@ -69,14 +96,14 @@ def add_to_favorites(recipe_id):
 
     if existing_favorite:
         return jsonify({'message': 'Recipe is already in Saved!'}), 200
-    else:
-        current_app.favorites_collection.insert_one({
-            'email': email,
-            'RecipeID': recipe_id,
-            'Title': recipe_title,
-            'ImageURL': recipe_image
-        })
-        flash('Recipe added to favorites!')
+
+    current_app.favorites_collection.insert_one({
+        'email': email,
+        'RecipeID': recipe_id,
+        'Title': recipe_title,
+        'ImageURL': recipe_image
+    })
+    flash('Recipe added to favorites!')
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id, search_query=request.args.get('search_query', '')))
 
@@ -87,7 +114,7 @@ def favorites():
 
     email = session['email']
     favorite_recipes_cursor = current_app.favorites_collection.find({'email': email})
-    favorite_recipes = list(favorite_recipes_cursor)  # Convert cursor to list
+    favorite_recipes = list(favorite_recipes_cursor)
     return render_template('favorites.html', favorite_recipes=favorite_recipes)
 
 @recipes_bp.route('/delete_from_favorites/<recipe_id>', methods=['DELETE'])
@@ -98,11 +125,11 @@ def delete_from_favorites(recipe_id):
     email = session['email']
     
     try:
-        recipe_id = int(recipe_id)  # Convert recipe_id to integer
+        recipe_id = int(recipe_id)
     except ValueError:
         return jsonify({"error": "Invalid recipe ID format"}), 400
 
-    query = {"RecipeID": recipe_id, "email": email}  # Updated field name to "email"
+    query = {"RecipeID": recipe_id, "email": email}
 
     result = current_app.favorites_collection.delete_one(query)
     
@@ -111,21 +138,17 @@ def delete_from_favorites(recipe_id):
     else:
         return jsonify({"error": "Recipe not found or you are not authorized to delete it"}), 404
 
-from datetime import datetime, timedelta
-
 @recipes_bp.route('/planner', methods=['GET', 'POST'])
 def planner():
+    if 'email' not in session:
+        return redirect(url_for('auth.login'))
+
     if request.method == 'POST':
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
         return redirect(url_for('recipes.meal_type', start_date=start_date, end_date=end_date))
 
-    if 'email' not in session:
-        return redirect(url_for('auth.login'))
-
     email = session['email']
-
-    # Retrieve existing date ranges from the database for the logged-in user
     existing_plans = current_app.meal_plans_collection.find({"email": email}, {"duration": 1, "_id": 0})
     disabled_dates = set()
 
@@ -137,11 +160,8 @@ def planner():
             disabled_dates.add(current_date.strftime("%Y-%m-%d"))
             current_date += timedelta(days=1)
 
-    # Convert the set to a sorted list
     disabled_dates = sorted(disabled_dates)
-    print("Disabled Dates:", disabled_dates)  # Debugging
 
-    # Render the template with disabled dates
     return render_template('planner.html', disabled_dates=disabled_dates)
 
 @recipes_bp.route('/meal_type', methods=['GET', 'POST'])
@@ -253,7 +273,6 @@ def manage_meal_plan(plan_id):
 
     meal_plan = current_app.meal_plans_collection.find_one({"_id": ObjectId(plan_id)})
     
-    # Meal type order for sorting
     meal_type_order = {"Breakfast": 0, "Lunch": 1, "Dinner": 2}
     meal_plan['meals'] = sorted(meal_plan['meals'], key=lambda meal: (meal['Date'], meal_type_order.get(meal['MealType'], 3)))
 
@@ -273,26 +292,24 @@ def update_meal_plan(plan_id):
         flash('Meal plan not found.')
         return redirect(url_for('recipes.my_plan'))
 
-    print("Form data received:")  # Debug statement
+    print("Form data received:")
     for key in request.form:
-        print(f"{key}: {request.form[key]}")  # Debug statement
+        print(f"{key}: {request.form[key]}")
 
     updated_meals = []
     removed_MealID = []
 
     for meal in meal_plan['meals']:
         meal_id = meal.get('MealID')
-        print(f"Processing meal ID: {meal_id}")  # Debug statement
+        print(f"Processing meal ID: {meal_id}")
         if meal_id and request.form.get(f'remove-{meal_id}') == 'true':
-            print(f"Removing meal ID: {meal_id}")  # Debug statement
+            print(f"Removing meal ID: {meal_id}")
             removed_MealID.append(meal_id)
-            continue  # Skip this meal if marked for removal
+            continue
         updated_meals.append(meal)
 
-    # Sort the updated meals by date
     updated_meals.sort(key=lambda x: x['Date'])
 
-    # Update the meal plan in the database
     current_app.meal_plans_collection.update_one(
         {"_id": ObjectId(plan_id)},
         {"$set": {"meals": updated_meals}}
@@ -315,7 +332,7 @@ def add_to_meal_plan_form(recipe_id, plan_id):
     if 'email' not in session:
         return redirect(url_for('auth.login'))
 
-    print(f"Received recipe_id: {recipe_id}, plan_id: {plan_id}")  # Debugging
+    print(f"Received recipe_id: {recipe_id}, plan_id: {plan_id}")
     email = session['email']
 
     meal_plan = current_app.meal_plans_collection.find_one({"_id": ObjectId(plan_id)})
@@ -349,13 +366,11 @@ def add_to_meal_plan(recipe_id, plan_id):
 
     date = request.form.get('date')
     meal_type = request.form.get('meal_type')
-    print(f"Received form data - Date: {date}, Meal Type: {meal_type}")  # Debugging
+    print(f"Received form data - Date: {date}, Meal Type: {meal_type}")
 
     print(f"Looking for recipe with recipe_id: {recipe_id}")
 
-    
     api_key = current_app.config['RECIPE_API_KEY']
-    # Ensure recipe_id is treated as an integer
     recipe = get_one_recipe_information(api_key, recipe_id)
     if not recipe:
         print(f"Recipe not found with recipe_id: {recipe_id}")
@@ -367,7 +382,6 @@ def add_to_meal_plan(recipe_id, plan_id):
         'RecipeID': recipe['id'],
         'Title': recipe['title']
     }
-    #print(f"Recipe details: {recipedetail}")
 
     meal_plan = current_app.meal_plans_collection.find_one({'_id': ObjectId(plan_id)})
     if meal_plan:
@@ -401,7 +415,7 @@ def generate_ingredients(plan_id):
         return jsonify({"success": False, "message": "Meal plan not found"}), 404
 
     recipe_ids = [meal['Recipe']['RecipeID'] for meal in meal_plan['meals'] if 'Recipe' in meal and 'RecipeID' in meal['Recipe']]
-    print("Debug: recipe_ids =", recipe_ids)  # Debug log
+    print("Debug: recipe_ids =", recipe_ids)
 
     detailed_ingredients = []
 
@@ -417,7 +431,6 @@ def generate_ingredients(plan_id):
                     'unit': ingredient['unit'] if ingredient['unit'] else 'unit not specified',
                 })
 
-    # Apply the simplify_ingredients function
     simplified_ingredients = simplify_ingredients(detailed_ingredients)
 
     return jsonify({"success": True, "message": "Ingredients added to shopping list", "ingredients": simplified_ingredients})
@@ -432,7 +445,6 @@ def save_ingredients():
     plan_id = data.get('plan_id')
     selected_ingredients = data.get('selected_ingredients')
 
-    # Fetch the meal plan to get the duration
     meal_plan = current_app.meal_plans_collection.find_one({"_id": ObjectId(plan_id), "email": email})
     if not meal_plan:
         return jsonify({"success": False, "message": "Meal plan not found"}), 404
@@ -448,25 +460,22 @@ def save_ingredients():
         "ingredient": selected_ingredients
     }
 
-    # Check if the shopping list for the given plan_id already exists
     existing_shopping_list = current_app.shopping_lists_collection.find_one({"plan_id": ObjectId(plan_id), "email": email})
 
     if existing_shopping_list:
-        # Update the existing shopping list
         current_app.shopping_lists_collection.update_one(
             {"_id": existing_shopping_list["_id"]},
             {"$set": {"createDate": str(datetime.today().date()), "ingredient": selected_ingredients}}
         )
         return jsonify({"success": True, "message": "Shopping list updated"}), 200
     else:
-        # Insert a new shopping list
         current_app.shopping_lists_collection.insert_one(shopping_list_template)
         return jsonify({"success": True, "message": "Shopping list created"}), 200
     
 @recipes_bp.route('/shopping_list')
 def shopping_list():
     if 'email' not in session:
-        return redirect(url_for('auth.login'))  # Redirect to login if user is not authenticated
+        return redirect(url_for('auth.login'))
     return render_template('shopping_list.html')
 
 @recipes_bp.route('/get_shopping_lists')
@@ -501,20 +510,15 @@ def get_ingredients(plan_id):
         print(f"Error converting plan_id to ObjectId: {e}")
         return jsonify({"error": "Invalid plan_id"}), 400
 
-    # Change the query to search for _id instead of plan_id
     query = {"_id": plan_object_id, "email": session['email']}
     print(f"Query: {query}")
     print(f"Session email: {session['email']}")
 
     ingredients = current_app.shopping_lists_collection.find_one(query)
     
-    #print(f"Fetched ingredients: {ingredients}")
-
     if ingredients and 'ingredient' in ingredients:
-        # Your existing code for processing ingredients
-        simplified_ingredients = simplify_ingredients(ingredients['ingredient'])  # No need for simplify_ingredients function
+        simplified_ingredients = simplify_ingredients(ingredients['ingredient'])
         
-        # Group ingredients by aisle
         ingredients_by_aisle = {}
         for ing in simplified_ingredients:
             aisle = ing.get('aisle', 'Unspecified')
@@ -531,7 +535,6 @@ def get_ingredients(plan_id):
             for aisle, ings in ingredients_by_aisle.items()
         ]
         
-        #print(f"Final response: {response}")
         return jsonify({"ingredients": response})
     else:
         print("No ingredients found or 'ingredient' key missing")
@@ -539,15 +542,13 @@ def get_ingredients(plan_id):
     
 @recipes_bp.route('/delete_shopping_list/<_id>', methods=['DELETE'])
 def delete_shopping_list(_id):
-    print(f"Received request to delete shopping list with plan_id: {_id}")  # Debug statement
+    print(f"Received request to delete shopping list with plan_id: {_id}")
     
-    # Convert plan_id to ObjectId
     try:
         plan_object_id = ObjectId(_id)
     except Exception as e:
         return jsonify({"error": "Invalid _id"}), 400
     
-    # Delete shopping list from MongoDB
     result = current_app.shopping_lists_collection.delete_one({"_id": plan_object_id, "email": session['email']})
     
     if result.deleted_count == 1:
@@ -555,16 +556,8 @@ def delete_shopping_list(_id):
     else:
         return jsonify({"error": "Shopping list not found"}), 404
 
-def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 @recipes_bp.route('/upload', methods=['GET', 'POST'])
 def upload_file():
-    logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
-
     if 'email' not in session:
         return redirect(url_for('auth.login'))
 
@@ -572,6 +565,11 @@ def upload_file():
     user = get_user_by_email(email)
 
     recipe_img_url = request.args.get('recipe_img_url')
+    if recipe_img_url is not None:
+        recipe_id = recipe_img_url.split('/')[-1].split('-')[0]
+        print(f"The recipe ID is: {recipe_id}")
+    else:
+        print("No recipe_img_url provided in the request")
 
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -580,29 +578,24 @@ def upload_file():
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
         if file and allowed_file(file.filename):
-            user_id = str(user['_id'])  # Assuming MongoDB's ObjectId, convert to string
+            user_id = str(user['_id'])
             file_extension = os.path.splitext(file.filename)[1]
             filename = secure_filename(f"meal_{user_id}{file_extension}")
             try:
-                # Get S3 client from current_app
                 s3 = boto3.client(
                     "s3",
                     region_name=current_app.config["S3_REGION"],
                     aws_access_key_id=current_app.config["S3_KEY"],
                     aws_secret_access_key=current_app.config["S3_SECRET"]
                 )
-                logger.debug("S3 client created successfully")
 
-                # Upload the new file to S3
                 s3.upload_fileobj(
                     file,
                     current_app.config["S3_BUCKET"],
                     filename
                 )
                 file_url = f"{current_app.config['S3_LOCATION']}{filename}"
-                logger.debug(f"File URL: {file_url}")
 
-                # Assuming compare_images function is updated to handle URLs
                 score = compare_images(file_url, recipe_img_url)
                 score = math.ceil(score * 100)
 
@@ -614,7 +607,7 @@ def upload_file():
                         "meals": {
                             "$elemMatch": {
                                 'Date': today_date_str,
-                                "Recipe.ImageURL": recipe_img_url
+                                "Recipe.RecipeID": int(recipe_id)
                             }
                         }
                     },
@@ -626,14 +619,10 @@ def upload_file():
                     }
                 )
 
-
-                # Delete the uploaded file from S3 after scoring
                 s3.delete_object(Bucket=current_app.config["S3_BUCKET"], Key=filename)
-                logger.debug(f"Deleted uploaded image: {filename}")
 
                 return jsonify({'score': score})
             except Exception as e:
-                logger.error(f"Error uploading file to S3: {str(e)}")
                 return jsonify({'error': str(e)}), 500
     return render_template('upload.html', recipe_img_url=recipe_img_url)
 
@@ -644,7 +633,6 @@ def add_recipe_from_favorite(recipe_id):
 
     email = session['email']
 
-    # If recipe_id is not in the URL, check if it's in the query parameters
     if recipe_id is None:
         recipe_id = request.args.get('recipe_id')
 
@@ -652,7 +640,6 @@ def add_recipe_from_favorite(recipe_id):
         flash('Recipe ID is required.')
         return redirect(url_for('recipes.favorites'))
 
-    # Retrieve existing date ranges from the database for the logged-in user
     existing_plans = current_app.meal_plans_collection.find({"email": email}, {"duration": 1, "_id": 0})
     disabled_dates = set()
 
@@ -664,9 +651,8 @@ def add_recipe_from_favorite(recipe_id):
             disabled_dates.add(current_date.strftime("%Y-%m-%d"))
             current_date += timedelta(days=1)
 
-    # Convert the set to a sorted list
     disabled_dates = sorted(disabled_dates) if disabled_dates else []
-    print("Disabled Dates:", disabled_dates)  # Debugging
+    print("Disabled Dates:", disabled_dates)
 
     api_key = current_app.config['RECIPE_API_KEY']
     recipe = get_one_recipe_information(api_key, recipe_id)
@@ -675,7 +661,6 @@ def add_recipe_from_favorite(recipe_id):
         flash('Recipe not found.')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
-    # Render the template with disabled dates and recipe
     return render_template('create_newplan_withrecipe.html', disabled_dates=disabled_dates, recipe=recipe)
 
 @recipes_bp.route('/create_mealplan_with_recipe/<int:recipe_id>', methods=['POST'])
@@ -691,17 +676,15 @@ def create_mealplan_with_recipe(recipe_id):
 
     date = request.form.get('date')
     meal_type = request.form.get('meal_type')
-    print(f"Received form data - Date: {date}, Meal Type: {meal_type}")  # Debugging
+    print(f"Received form data - Date: {date}, Meal Type: {meal_type}")
 
     api_key = current_app.config['RECIPE_API_KEY']
-    # Ensure recipe_id is treated as an integer
     recipe = get_one_recipe_information(api_key, recipe_id)
     if not recipe:
         print(f"Recipe not found with recipe_id: {recipe_id}")
         flash('Recipe not found.')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
-    # Create a meal plan for a week starting from the selected date
     start_date = date
     end_date = date
 
@@ -714,7 +697,6 @@ def create_mealplan_with_recipe(recipe_id):
             'RecipeID': recipe['id'],
             'Title': recipe['title']
         }
-        
     }
 
     meal_plan = {
@@ -724,10 +706,9 @@ def create_mealplan_with_recipe(recipe_id):
             "end_date": end_date
         },
         "email": email,
-        "meals": [meal]  # Start with the current meal in a list
+        "meals": [meal]
     }
 
-    # Insert the new meal plan into the collection
     result = current_app.meal_plans_collection.insert_one(meal_plan)
 
     if result.inserted_id:
