@@ -56,6 +56,9 @@ def allowed_file(filename):
 
 @recipes_bp.route('/explore', methods=['GET', 'POST'])
 def explore():
+    if 'email' not in session:
+        return redirect(url_for('auth.login'))
+    
     api_key = current_app.config['RECIPE_API_KEY']
     
     if request.method == 'POST':
@@ -71,6 +74,9 @@ def explore():
 # Routes
 @recipes_bp.route('/recipe/<int:recipe_id>')
 def view_recipe(recipe_id):
+    if 'email' not in session:
+        return redirect(url_for('auth.login'))
+    
     api_key = current_app.config['RECIPE_API_KEY']
     search_query = request.args.get('search_query', '')
     recipe = get_full_recipe_details(api_key, recipe_id)

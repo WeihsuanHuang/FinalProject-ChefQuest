@@ -5,6 +5,7 @@ import os
 from werkzeug.utils import secure_filename
 from flask_bcrypt import Bcrypt
 import boto3
+import re
 
 
 # Flask Blueprint setup
@@ -25,6 +26,10 @@ def setup_db():
 
 # Helper functions
 def get_user_by_email(email):
+    # Basic email validation
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        return None
+
     return current_app.users_collection.find_one({"email": email})
 
 def allowed_file(filename):
