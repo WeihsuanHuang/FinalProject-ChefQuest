@@ -38,11 +38,8 @@ Follow these steps to set up the project on your local machine.
 
 5. **Set up environment variables**
    - Create a `.env` file in the project root and add the required variables:
-     - Copy the example file to create your `.env` file:
-       ```sh
-       cp .env.example .env
-       ```
-     - Open the `.env` file in a text editor and add your secret keys and API keys:
+   
+   - Open the `.env` file in a text editor and add your secret keys and API keys:
        ```plaintext
        RECIPE_API_KEY=your_spoonacular_api_key
        MONGODB_URI=your_mongodb_uri
